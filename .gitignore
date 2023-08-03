@@ -1,0 +1,12 @@
+.vscode/settings.json
+lectures/intropython.ipynb
+lectures/__pycache__/linearalgebra.cpython-39.pyc
+lectures/__pycache__/linearsys.cpython-39.pyc
+lectures/__pycache__/Math136Ex2_Lab2.cpython-39.pyc
+lectures/__pycache__/polyinterp.cpython-39.pyc
+lectures/__pycache__/rootscalar_accel.cpython-37.pyc
+lectures/__pycache__/rootscalar.cpython-37.pyc
+lectures/__pycache__/rootscalar.cpython-39.pyc
+lectures/__pycache__/timer.cpython-37.pyc
+lectures/__pycache__/timer.cpython-39.pyc
+plots/newtonhorner.png
