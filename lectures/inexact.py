@@ -1,21 +1,21 @@
 """ Implementation of first-order inexact newtonraphson methods. """
 
 import numpy as np
-import rootscalar
+from rootscalar import rootscalar, param
 
 def f(x):
     return 0.25*np.cos(2*x)**2 - x**2
 
-parameter = rootscalar.param()
+parameter = param()
 parameter.maxit = 100
 parameter.tol = 1e-15
 
-Inexactcenter = rootscalar.inexactcenter(f, 0.5, parameter)
-Inexactforward = rootscalar.inexactforward(f, 0.5, parameter)
-Inexactbackward = rootscalar.inexactbackward(f, 0.5, parameter)
+Inexactcenter = rootscalar(f, None, None, None, 0.5, options=dict({"method" : "newton", "inexact" : "center"}), parameter=parameter)
+Inexactforward = rootscalar(f, None, None, None, 0.5, options=dict({"method" : "newton","inexact" : "forward"}), parameter=parameter)
+Inexactbackward = rootscalar(f, None, None, None, 0.5, options=dict({"method" : "newton","inexact" : "backward"}), parameter=parameter)
 
 method = [Inexactcenter, Inexactforward, Inexactbackward]
-for i in range(0, 3):
+for i in range(3):
     name = ['CENTER', 'FORWARD', 'BACKWARD']
     method[i].method_name = name[i]
     

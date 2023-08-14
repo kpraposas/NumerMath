@@ -64,6 +64,76 @@ class Result:
             "ELAPSED TIME:                   {:.16e} seconds\n".format(self.elapsed_time)
             ]
         return "".join(list_str_repr)
+
+
+class param():
+    """
+    Class for parameters in scalar root-finding algorithms.
+
+    Attributes
+    ----------
+    tol : float
+        tolerance of the method, default is machine epsilon
+    reftol : float
+        tolerance for the refinement subroutine, default is 1e-3
+    maxit : int
+        maximum number of iterations, default is 1000
+    refmax : int
+        maximum number of iterations for refinement, default = 100
+    ref : bool
+        refinement subroutine, default is true
+    abstol : float
+        weight of the absolute error of the root approximate
+    funtol : float
+        weight of the absolute function value of the root approximate
+    """
+
+    def __init__(self, maxit=1000, tol=np.finfo("float").eps, abstol=0.9,
+                 funtol=0.1, refmax=100, reftol=1e-3, ref=True):
+        """
+        Class initialization.
+        """
+        self.abstol = abstol
+        self.funtol = funtol
+        self.tol = tol
+        self.reftol = reftol
+        self.maxit = maxit
+        self.refmax = refmax
+        self.ref = ref
+
+def rootscalar(f, df, a, b, x, options, parameter):
+    """
+    Attributes
+    ----------
+        f : callable
+            scalar-valued function
+        a : float
+            left endpoint
+        b : float
+            right endpoint
+        x : float or list
+            initial iterates or list of initial iterates
+        options : dict
+            dictionary of methods to solve for scalar root
+        parameters : class
+            parameters to be passed in the specified method
+            
+    Returns
+    -------
+        rootscalar.Result : class
+    """
+    if options["method"] == "bisection":
+        return bisection(f, a, b, parameter)
+    if options["method"] == "chord":
+        return chord(f, a, b, x, parameter)
+    if options["method"] == "secant":
+        return secant(f, x[0], x[1], parameter)
+    if options["method"] == "regfalsi":
+        return regfalsi(f, x[0], x[1], parameter)
+    if options["method"] == "newton":
+        return newtonraphson(f, df, x, options, parameter)
+    if options["method"] == "steffensen":
+        return steffensen(f, x, parameter)
     
 
 class Result_Multiple:
@@ -125,61 +195,10 @@ class Result_Multiple:
         return "".join(list_str_repr)
 
 
-class param():
-    """
-    Class for parameters in scalar root-finding algorithms.
-
-    Attributes
-    ----------
-    tol : float
-        tolerance of the method, default is machine epsilon
-    reftol : float
-        tolerance for the refinement subroutine, default is 1e-3
-    maxit : int
-        maximum number of iterations, default is 1000
-    refmax : int
-        maximum number of iterations for refinement, default = 100
-    ref : bool
-        refinement subroutine, default is true
-    abstol : float
-        weight of the absolute error of the root approximate
-    funtol : float
-        weight of the absolute function value of the root approximate
-    """
-
-    def __init__(self, maxit=1000, tol=np.finfo("float").eps, abstol=0.9,
-                 funtol=0.1, refmax=100, reftol=1e-3, ref=1):
-        """
-        Class initialization.
-        """
-        self.abstol = abstol
-        self.funtol = funtol
-        self.tol = tol
-        self.reftol = reftol
-        self.maxit = maxit
-        self.refmax = refmax
-        self.ref = ref
-
-
 def bisection(f, a, b, parameter):
     """
     Bisection method for approximating a solution of the scalar equation
         f(x) = 0.
-
-    Parameters:
-    -----------
-    f : callable
-        scalar-valued function
-    a : float
-        left endpoint
-    b : float
-        right endpoint
-    parameter : class 'rootscalar.param'
-        parameters to be passed in the method
-
-    Returns
-    -------
-    class 'rootscalar.Result'
     """
     stopwatch = timer()
     stopwatch.start()
@@ -188,12 +207,14 @@ def bisection(f, a, b, parameter):
     fa = f(a)
     fb = f(b)
     k = 0
+    # Check for endpoints
     if fa == 0:
         c = a
         error = 0
     if fb == 0:
         c = b
         error = 0
+    # Check if endpoints' sign differ
     if fa * fb > 0:
         print("Method Fails")
         return None
@@ -218,28 +239,12 @@ def bisection(f, a, b, parameter):
 def chord(f, a, b, x, parameter):
     """
     Chord method for approximating a solution of the scalar equation f(x) = 0.
-
-    Parameters:
-    -----------
-    f : callable
-        scalar-valued function
-    a : float
-        left endpoint
-    b : float
-        right endpoint
-    x : float
-        first iterate
-    parameter : class 'rootscalar.param'
-        parameters to be passed in the method
-
-    Returns
-    -------
-    class 'rootscalar.Result'
     """
     stopwatch = timer()
     stopwatch.start() 
     term_flag = "Success"
     error = parameter.tol + 1
+    # Compute fixed slope q
     q = (f(b) - f(a)) / (b - a)
     fx = f(x)
     k = 0
@@ -260,21 +265,6 @@ def chord(f, a, b, x, parameter):
 def secant(f, x0, x1, parameter):
     """
     Secant method for approximating a solution of the scalar equation f(x) = 0.
-
-    Parameters:
-    -----------
-    f : callable
-        scalar-valued function
-    x0 : float
-        first iterate
-    x1 : float
-        second iterate
-    parameter : class 'rootscalar.param'
-        parameters to be passed in the method
-
-    Returns
-    -------
-    class 'rootscalar.Result'
     """
     stopwatch = timer()
     stopwatch.start()
@@ -285,10 +275,11 @@ def secant(f, x0, x1, parameter):
     k = 1
     # main loop
     while error > parameter.tol and k < parameter.maxit:
+        # Compute slope q
         q = (f1 - f0) / (x1 - x0)
-        x_temp = x1
+        temp = x1
         x1 = x1 - f1 / q
-        x0 = x_temp
+        x0 = temp
         f0 = f1
         f1 = f(x1)
         error = parameter.abstol * abs(x1 - x0) + parameter.funtol * abs(f1)
@@ -304,26 +295,12 @@ def regfalsi(f, x0, x1, parameter):
     """
     Regula Falsi method for approximating a solution of the scalar equation
         f(x) = 0.
-
-    Parameters:
-    -----------
-    f : callable
-        scalar-valued function
-    x0 : float
-        first iterate
-    x1 : float
-        second iterate
-    parameter : class 'rootscalar.param'
-        parameters to be passed in the method
-
-    Returns
-    -------
-    class 'rootscalar.Result'
     """
     stopwatch = timer()
     stopwatch.start()
     term_flag = "Success"
     error = parameter.tol + 1
+    # Lists of iterates and their correponding function values
     x_array = [x0, x1]
     f_array = [f(x0), f(x1)]
     k = 1
@@ -331,14 +308,14 @@ def regfalsi(f, x0, x1, parameter):
     while error > parameter.tol and k < parameter.maxit:
         xc = x_array[k]
         fc = f_array[k]
-        k_tilde = k - 1
-        x_tilde = x_array[k_tilde]
-        f_tilde = f_array[k_tilde]
-        while f_tilde * fc >= 0 and k_tilde > 1:
-            k_tilde -= 1
-            x_tilde = x_array[k_tilde]
-            f_tilde = f_array[k_tilde]
-        q = (fc - f_tilde) / (xc - x_tilde)
+        j = k - 1
+        xj = x_array[j]
+        fj = f_array[j]
+        while fj * fc >= 0 and j > 1:
+            j -= 1
+            xj = x_array[j]
+            fj = f_array[j]
+        q = (fc - fj) / (xc - xj)
         x = xc - fc / q
         x_array.append(x)
         f_array.append(f(x))
@@ -351,63 +328,10 @@ def regfalsi(f, x0, x1, parameter):
         stopwatch.get_elapsed_time, "REGULA FALSI", term_flag)
 
 
-def newtonraphson(f, df, x, parameter):
+def newtonraphson(f, df, x, options, parameter):
     """
     Newton-Raphson method for approximating a solution of the scalar equation
         f(x) = 0.
-
-    Parameters:
-    -----------
-    f : callable
-        scalar-valued function
-    df : callable
-        exact derivative of f
-    x : float
-        first iterate
-    parameter : class 'rootscalar.param'
-        parameters to be passed in the method
-
-    Returns
-    -------
-    class 'rootscalar.Result'
-    """
-    stopwatch = timer()
-    stopwatch.start()
-    term_flag = "Success"
-    error = parameter.tol + 1
-    fx = f(x)
-    k = 0
-    # main loop
-    while error > parameter.tol and k < parameter.maxit:
-        x_old = x
-        x = x - fx / df(x)
-        fx = f(x)
-        error = parameter.abstol * abs(x - x_old) + parameter.funtol * abs(fx)
-        k += 1
-    if error > parameter.tol and k == parameter.maxit:
-        term_flag = "Fail"
-    stopwatch.stop()
-    return Result(k, parameter.maxit, x, fx, error, parameter.tol,
-        stopwatch.get_elapsed_time, "NEWTON-RAPHSON", term_flag)
-
-
-def inexactforward(f, x, parameter):
-    """
-    Inexact Forward Newton-Raphson method for approximating a solution of
-        the scalar equation f(x) = 0.
-
-    Parameters:
-    -----------
-    f : callable
-        scalar-valued function
-    x : float
-        first iterate
-    parameter : class 'rootscalar.param'
-        parameters to be passed in the method
-
-    Returns
-    -------
-    class 'rootscalar.Result'
     """
     stopwatch = timer()
     stopwatch.start()
@@ -419,8 +343,19 @@ def inexactforward(f, x, parameter):
     # main loop
     while error > parameter.tol and k < parameter.maxit:
         x_old = x
-        df = (f(x + root_eps) - f(x)) / root_eps
-        x = x - fx / df
+        if df != None:
+            dfx = df(x)
+            methodname = "NEWTON-RAPHSON"
+        elif options["inexact"] == "forward":
+            dfx = (f(x + root_eps) - f(x)) / root_eps
+            methodname = "INEXACTFORWARD"
+        elif options["inexact"] == "backward":
+            dfx = (f(x) - f(x - root_eps)) / root_eps
+            methodname = "INEXACTBACKWARD"
+        elif options["inexact"] == "center":
+            dfx = (f(x + root_eps) - f(x - root_eps)) / (2.0*root_eps)
+            methodname = "INEXACTCENTER"
+        x = x - fx / dfx
         fx = f(x)
         error = parameter.abstol * abs(x - x_old) + parameter.funtol * abs(fx)
         k += 1
@@ -428,105 +363,12 @@ def inexactforward(f, x, parameter):
         term_flag = "Fail"
     stopwatch.stop()
     return Result(k, parameter.maxit, x, fx, error, parameter.tol,
-        stopwatch.get_elapsed_time, "INEXACT FORWARD", term_flag)
-
-
-def inexactbackward(f, x, parameter):
-    """
-    Inexact Backward Newton-Raphson method for approximating a solution of
-        the scalar equation f(x) = 0.
-
-    Parameters:
-    -----------
-    f : callable
-        scalar-valued function
-    x : float
-        first iterate
-    parameter : class 'rootscalar.param'
-        parameters to be passed in the method
-
-    Returns
-    -------
-    class 'rootscalar.Result'
-    """
-    stopwatch = timer()
-    stopwatch.start()
-    term_flag = "Success"
-    error = parameter.tol + 1
-    fx = f(x)
-    root_eps = np.sqrt(np.finfo(float).eps)
-    k = 0
-    # main loop
-    while error > parameter.tol and k < parameter.maxit:
-        x_old = x
-        df = (f(x) - f(x - root_eps)) / root_eps
-        x = x - fx / df
-        fx = f(x)
-        error = parameter.abstol * abs(x - x_old) + parameter.funtol * abs(fx)
-        k += 1
-    if error > parameter.tol and k == parameter.maxit:
-        term_flag = "Fail"
-    stopwatch.stop()
-    return Result(k, parameter.maxit, x, fx, error, parameter.tol,
-        stopwatch.get_elapsed_time, "INEXACT BACKWARD", term_flag)
-
-
-def inexactcenter(f, x, parameter):
-    """
-    Inexact Center Newton-Raphson method for approximating a solution of
-        the scalar equation f(x) = 0.
-
-    Parameters:
-    -----------
-    f : callable
-        scalar-valued function
-    x : float
-        first iterate
-    parameter : class 'rootscalar.param'
-        parameters to be passed in the method
-
-    Returns
-    -------
-    class 'rootscalar.Result'
-    """
-    stopwatch = timer()
-    stopwatch.start()
-    term_flag = "Success"
-    error = parameter.tol + 1
-    fx = f(x)
-    root_eps = np.sqrt(np.finfo(float).eps)
-    k = 0
-    # main loop
-    while error > parameter.tol and k < parameter.maxit:
-        x_old = x
-        df = (f(x + root_eps) - f(x - root_eps)) / (2*root_eps)
-        x = x - fx / df
-        fx = f(x)
-        error = parameter.abstol * abs(x - x_old) + parameter.funtol * abs(fx)
-        k += 1
-    if error > parameter.tol and k == parameter.maxit:
-        term_flag = "Fail"
-    stopwatch.stop()
-    return Result(k, parameter.maxit, x, fx, error, parameter.tol,
-        stopwatch.get_elapsed_time, "INEXACT CENTER", term_flag)
+        stopwatch.get_elapsed_time, methodname, term_flag)
 
 
 def steffensen(f, x, parameter):
     """
     Steffensen method for approximating a solution of the scalar equation f(x) = 0.
-
-    Parameters:
-    -----------
-    f : callable
-        scalar-valued function
-    x : float
-        first iterate
-    parameter : class 'rootscalar.param'
-        parameters to be passed in the method
-
-    Returns
-    -------
-    class 'rootscalar.Result'
     """
     stopwatch = timer()
     stopwatch.start()

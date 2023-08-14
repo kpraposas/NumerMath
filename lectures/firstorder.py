@@ -1,7 +1,7 @@
 """ Implementation of first-order methods. """
 
 import numpy as np
-import rootscalar
+from rootscalar import rootscalar, param
 
 def f(x):
     return 0.25*np.cos(2*x)**2 - x**2
@@ -9,18 +9,22 @@ def f(x):
 def g(x):
     return -np.sin(2.0*x)*np.cos(2.0*x) - 2*x
 
-parameter = rootscalar.param()
+parameter = param()
 parameter.maxit = 100
 parameter.tol = 1e-15
 
-Chord = rootscalar.chord(f, 0.0, 0.5, 1.0, parameter)
-Secant = rootscalar.secant(f, 0.5, 0.0, parameter)
-RegulaFalsi = rootscalar.regfalsi(f, 0.5, 0.0, parameter)
-NewtonRaphson = rootscalar.newtonraphson(f, g, 0.5, parameter)
-Inexactcenter = rootscalar.inexactcenter(f, 0.5, parameter)
-Steffensen = rootscalar.steffensen(f, 0.5, parameter)
+Chord = rootscalar(f, None, 0.0, 0.5, 1.0, options=dict({"method" : "chord"}), parameter=parameter)
+Secant = rootscalar(f, None, None, None, [0.5, 0.0], options=dict({"method" : "secant"}), parameter=parameter)
+RegulaFalsi = rootscalar(f, None, None, None, [0.5, 0.0], options=dict({"method" : "regfalsi"}), parameter=parameter)
+NewtonRaphson = rootscalar(f, g, None, None, 0.5, options=dict({"method" : "newton"}), parameter=parameter)
+Inexactcenter = rootscalar(f, None, None, None, 0.5, options=dict({"method" : "newton", "inexact" : "center"}), parameter=parameter)
+Steffensen = rootscalar(f, None, None, None, 0.5, options=dict({"method" : "steffensen"}), parameter=parameter)
+
+def takeNumit(result):
+    return result.numit
 
 method = [Chord, Secant, RegulaFalsi, NewtonRaphson, Inexactcenter, Steffensen]
+method.sort(reverse=True, key=takeNumit)
 
 print('-'*86)    
 print("{:<16}{:<22}{:<22}{:<20}{:<6}".format('METHOD', 'APPROXIMATE ROOT',

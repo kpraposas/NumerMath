@@ -27,9 +27,9 @@ y_max = y.max()
 y_min = y.min()
 
 # plot figure
-ax = plt.figure(1, figsize=(10, 4)).addsubplot(111)
+ax = plt.figure(1, figsize=(10, 4)).add_subplot(111)
 ax.plot(k, z, linestyle="--", linewidth=1, color="firebrick")
-ax.semilogy(k, y, marker="o", linestyle="-", linewdith=0.5, color="darkblue",
+ax.semilogy(k, y, marker="o", linestyle="-", linewidth=0.5, color="darkblue",
             markersize=4, markeredgecolor="k", alpha=0.5)
 ax.set_xlabel(r"$k$", fontsize=12)
 ax.set_ylabel(r"$fl(r(x_k))$", fontsize=12)
