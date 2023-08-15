@@ -1,5 +1,5 @@
 import numpy as np
-import rootscalar
+from rootscalar import rootscalar, param, options
 
 def f(x):
     return x**5 - x**4 - x**3 - x**2 - x - 1
@@ -7,9 +7,12 @@ def f(x):
 def df(x):
     return 5*x**4 - 4*x**3 - 3*x**2 - 2*x - 1
 
-parameter = rootscalar.param()
+parameter = param()
 parameter.maxit = 1000
 parameter.tol = np.finfo(float).eps
+
+options = options
+options["inexact"] = ""
 
 method_result = []
 
@@ -17,10 +20,13 @@ newton_result = []
 secant_result = []
 muller_result = []
 for k in range(0, 10):
-    newton_result.append(rootscalar.newtonraphson(f, df, 0.2*k, parameter))
-    secant_result.append(rootscalar.secant(f, 0.2*k, 0.2*k + 0.5, parameter))
-    muller_result.append(rootscalar.muller(f, 0.2*k, 0.2*k + 0.5, 0.2*k + 1.,
-        parameter))
+    newton_result.append(rootscalar(f, df, None, None, 0.2*k, None,
+                                    options, parameter=parameter))
+    secant_result.append(rootscalar(f, None, None, None, [0.2*k + _ for _ in [0, 0.5]], None,
+                                    options=dict({"method" : "secant"}), parameter=parameter))
+    muller_result.append(rootscalar(f, None, None, None, [0.2*k + _ for _ in [0, 0.5, 1.]], None,
+                                    options=dict({"method" : "muller"}), parameter=parameter))
+    
 method_result.append(newton_result)
 method_result.append(secant_result)
 method_result.append(muller_result)
