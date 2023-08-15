@@ -1,7 +1,7 @@
 """ Implementation of acceleration of newtonraphson methods. """
 
 import numpy as np
-import rootscalar
+from rootscalar import rootscalar, param, options
 
 def f(x):
     return (x*x - 1)**7 * np.log(x)
@@ -9,18 +9,21 @@ def f(x):
 def df(x):
     return (x*x - 1)**6 * (14 * x * np.log(x + np.finfo(float).eps) + (x*x - 1) / x)
 
-parameter = rootscalar.param()
+parameter = param()
 parameter.maxit = 1000
 parameter.tol = 1e-10
 
-newton = rootscalar.newtonraphson(f, df, 0.8, parameter)
-modnewton = rootscalar.modnewton(f, df, 0.8, 8, parameter)
-adaptivenewton = rootscalar.adaptivenewton(f, df, 0.8, parameter, 1, 1e-3, 1e-2)
+options = options
+
+newton = rootscalar(f, df, None, None, 0.8, None, options, parameter=parameter)
+modnewton = rootscalar(f, df, None, None, 0.8, 8, options=dict({"method" : "modnewton"}), parameter=parameter)
+adaptivenewton = rootscalar(f, df, None, None, 0.8, None, options=dict({"method" : "adaptivenewton"}), parameter=parameter)
+
+def takeNumit(result):
+    return result.numit
 
 method = [newton, modnewton, adaptivenewton]
-for i in range(0, 3):
-    name = ['Newton', 'ModifiedNewton', 'AdaptiveNewton']
-    method[i].method_name = name[i]
+method.sort(reverse=True, key=takeNumit)
     
 print('-'*90)    
 print("{:<16}{:<24}{:<24}{:<20}{:<6}".format('METHOD', 'APPROXIMATE ROOT',

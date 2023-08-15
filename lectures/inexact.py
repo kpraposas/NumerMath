@@ -10,9 +10,9 @@ parameter = param()
 parameter.maxit = 100
 parameter.tol = 1e-15
 
-Inexactcenter = rootscalar(f, None, None, None, 0.5, options=dict({"method" : "newton", "inexact" : "center"}), parameter=parameter)
-Inexactforward = rootscalar(f, None, None, None, 0.5, options=dict({"method" : "newton","inexact" : "forward"}), parameter=parameter)
-Inexactbackward = rootscalar(f, None, None, None, 0.5, options=dict({"method" : "newton","inexact" : "backward"}), parameter=parameter)
+Inexactcenter = rootscalar(f, None, None, None, 0.5, None, options=dict({"method" : "newton", "inexact" : "center"}), parameter=parameter)
+Inexactforward = rootscalar(f, None, None, None, 0.5, None, options=dict({"method" : "newton","inexact" : "forward"}), parameter=parameter)
+Inexactbackward = rootscalar(f, None, None, None, 0.5, None, options=dict({"method" : "newton","inexact" : "backward"}), parameter=parameter)
 
 method = [Inexactcenter, Inexactforward, Inexactbackward]
 for i in range(3):

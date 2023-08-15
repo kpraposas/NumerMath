@@ -64,6 +64,12 @@ class Result:
             "ELAPSED TIME:                   {:.16e} seconds\n".format(self.elapsed_time)
             ]
         return "".join(list_str_repr)
+    
+    
+    def print_settings(self):
+        """
+        Print options and parameters of an instance of the Result
+        """
 
 
 class param():
@@ -86,10 +92,18 @@ class param():
         weight of the absolute error of the root approximate
     funtol : float
         weight of the absolute function value of the root approximate
+    m0 : int
+        initial guess of multiplicity of roots
+    alpha : float
+        allowable change in values of ratios of consecutive errors
+        (see Aitken's Method in the Lecture Notes)
+    Lambda : float
+        lower bound of allowed ratio of consecutive error
     """
+    
 
-    def __init__(self, maxit=1000, tol=np.finfo("float").eps, abstol=0.9,
-                 funtol=0.1, refmax=100, reftol=1e-3, ref=True):
+    def __init__(self, maxit=1000, tol=np.finfo("float").eps, abstol=0.9, funtol=0.1,
+                 m0=1, alpha=1e-3, Lambda=1e-3, refmax=100, reftol=1e-3, ref=True):
         """
         Class initialization.
         """
@@ -98,21 +112,47 @@ class param():
         self.tol = tol
         self.reftol = reftol
         self.maxit = maxit
+        self.m0 = m0
+        self.alpha = alpha
+        self.Lambda = Lambda
         self.refmax = refmax
         self.ref = ref
 
-def rootscalar(f, df, a, b, x, options, parameter):
+
+# Options Dictionary Initialization
+options = dict()
+"""
+    Dictionary for scalar root finding algorithms
+        method      : bisection, chord, secant, regfalsi, newton, steffensen,
+                        fixpoint, muller, rootpolyinterp, sidisecant,
+                        dekker, aitken, modnewton, and adaptive newton
+            methods for scalar root finding, newton method as default
+        inexact     : forward, backward, center
+            inexact approximation of derivative for inexact newton method
+            center as default
+            
+"""
+options = {
+    "method" : "newton",
+    "inexact" : "center"
+}
+
+def rootscalar(f, df, a, b, x, m, options, parameter):
     """
     Attributes
     ----------
         f : callable
             scalar-valued function
+        df : callable
+            derivative of f
         a : float
             left endpoint
         b : float
             right endpoint
-        x : float or list
+        x : float or list of floats
             initial iterates or list of initial iterates
+        m : int
+            multiplicity of root 
         options : dict
             dictionary of methods to solve for scalar root
         parameters : class
@@ -134,7 +174,18 @@ def rootscalar(f, df, a, b, x, options, parameter):
         return newtonraphson(f, df, x, options, parameter)
     if options["method"] == "steffensen":
         return steffensen(f, x, parameter)
-    
+    if options["method"] == "fixpoint":
+        return fixpoint(f, x, parameter)
+    if options["method"] == "muller":
+        return muller(f, x[0], x[1], x[2], parameter)
+    if options["method"] == "dekker":
+        return dekkerbrent(f, a, b, parameter)
+    if options["method"] == "aitken":
+        return aitken(f, x, parameter)
+    if options["method"] == "modnewton":
+        return modnewton(f, df, x, m, parameter)
+    if options["method"] == "adaptivenewton":
+        return adaptivenewton(f, df, x, parameter)
 
 class Result_Multiple:
     """
@@ -348,13 +399,13 @@ def newtonraphson(f, df, x, options, parameter):
             methodname = "NEWTON-RAPHSON"
         elif options["inexact"] == "forward":
             dfx = (f(x + root_eps) - f(x)) / root_eps
-            methodname = "INEXACTFORWARD"
+            methodname = "INEXACT FORWARD"
         elif options["inexact"] == "backward":
             dfx = (f(x) - f(x - root_eps)) / root_eps
-            methodname = "INEXACTBACKWARD"
+            methodname = "INEXACT BACKWARD"
         elif options["inexact"] == "center":
             dfx = (f(x + root_eps) - f(x - root_eps)) / (2.0*root_eps)
-            methodname = "INEXACTCENTER"
+            methodname = "INEXACT CENTER"
         x = x - fx / dfx
         fx = f(x)
         error = parameter.abstol * abs(x - x_old) + parameter.funtol * abs(fx)
@@ -393,20 +444,7 @@ def steffensen(f, x, parameter):
 
 def fixpoint(g, x, parameter):
     """
-    Fix-point method for approximating a solution of the scalar equation f(x) = 0.
-
-    Parameters:
-    -----------
-    g : callable
-        scalar-valued function
-    x : float
-        first iterate
-    parameter : class 'rootscalar.param'
-        parameters to be passed in the method
-
-    Returns
-    -------
-    class 'rootscalar.Result'
+    Fix-point method for approximating a solution of the scalar equation g(x) = x.
     """
     stopwatch = timer()
     stopwatch.start()
@@ -429,23 +467,6 @@ def fixpoint(g, x, parameter):
 def muller(f, x0, x1, x2, parameter):
     """
     Muller method for approximating a solution of the scalar equation f(x) = 0.
-
-    Parameters:
-    -----------
-    f : callable
-        scalar-valued function
-    x1 : float
-        second iterate
-    x2 : float
-        first iterate
-    x3 : float
-        third iterate
-    parameter : class 'rootscalar.param'
-        parameters to be passed in the method
-
-    Returns
-    -------
-    class 'rootscalar.Result'
     """
     stopwatch = timer()
     stopwatch.start()
@@ -461,11 +482,12 @@ def muller(f, x0, x1, x2, parameter):
         f12 = (f2 - f1) / (x2 - x1)
         f012 = (f12 - f01) / (x2 - x0)
         w = f12 + f012 * (x2 - x1)
-        alpha = w * w - 4.0 * f2 * f012
+        alpha = w * w - 4. * f2 * f012
         if alpha >= 0:
             d = max(w - np.sqrt(alpha), w + np.sqrt(alpha))
-            x = x2 - 2.0 * f2 / d
-        else: x = x2 - f2 / f12
+            x = x2 - 2. * f2 / d
+        else:
+            x = x2 - f2 / f12
         x0 = x1
         x1 = x2
         x2 = x
@@ -481,44 +503,82 @@ def muller(f, x0, x1, x2, parameter):
         stopwatch.get_elapsed_time, "MULLER", term_flag)
 
 
-# rootpolyinterp, sidi secant
+def rootpolyinterp(f, x, parameter):
+    """
+    Generalization of Secant and Muller methods for approximating a solution of the scalar equation f(x) = 0.
+    """
+    stopwatch = timer()
+    stopwatch.start()
+    term_flag = "Success"
+    n = len(x)
+    error = parameter.tol + 1
+    k = n - 1
+    while error > parameter.tol and k < parameter.maxit:
+        pass
+        # Calculate polynomial p with args ((x0, f0), (x1, f1), ..., (xn-1, fn-1))
+        # Compute real roots z1, z2, ..., zl of p, l <= n - 1
+        # Choose s s.t. |z[s]| = min(z).index
+        # x = z[s]
+        # error = parameter.abstol * abs(x - x[n-1]) + parameter.funtol * abs(fx)
+        # for j in range(n - 1):
+        #     x[j] = x[j + 1]
+        # x[n - 1] = x
+        # k += 1
+    if error > parameter.tol and k == parameter.maxit:
+        term_flag = "Fail"
+    stopwatch.stop()
+    return
+        # Result(k, parameter.maxit, x2, f2, error, parameter.tol, stopwatch.get_elapsed_time, "MULLER", term_flag)
 
 
-def moddekkerbrent(f, a, b, parameter):
+def sidisecant(f, x, parameter):
+    """
+    Generalization of Secant, Muller as well as Newton methods for approximating a solution of the scalar equation f(x) = 0.
+    """
+    stopwatch = timer()
+    stopwatch.start()
+    term_flag = "Success"
+    n = len(x)
+    error = parameter.tol + 1
+    k = n - 1
+    while error > parameter.tol and k < parameter.maxit:
+        pass
+        # Calculate polynomial p with args ((x0, f0), (x1, f1), ..., (xn-1, fn-1))
+        # x = x[n - 1] - f[n - 1] / dp(x[n - 1])
+        # error = parameter.abstol * abs(x - x[n - 1]) + parameter.funtol * abs(fx)
+        # for j in range(n - 2):
+        #     x[j] = x[j + 1]
+        # x[n - 1] = x
+        # k += 1
+    if error > parameter.tol and k == parameter.maxit:
+        term_flag = "Fail"
+    stopwatch.stop()
+    return
+        # Result(k, parameter.maxit, x2, f2, error, parameter.tol, stopwatch.get_elapsed_time, "MULLER", term_flag)
+
+
+def dekkerbrent(f, a, b, parameter):
     """
     Modified Dekker-Brent method for approximating a solution of the scalar
         equation f(x) = 0.
-
-    Parameters:
-    -----------
-    g : callable
-        scalar-valued function
-    a : float
-        left endpoint
-    b : float
-        right endpoint
-    parameter : class 'rootscalar.param'
-        parameters to be passed in the method
-
-    Returns
-    -------
-    class 'rootscalar.Result'
     """
     stopwatch = timer()
     stopwatch.start()
     term_flag = "Success"
     error = parameter.tol + 1
     eps = np.finfo(float).eps
-    delta = parameter.tol + 2 * eps * abs(b)
+    delta = parameter.tol + 2. * eps * abs(b)
     fa = f(a)
     fb = f(b)
     k = 0
     if fa == 0:
         b = a
         error = 0
-    if fb == 0: error = 0
+    if fb == 0:
+        error = 0
     a_old = a
     f_a_old = fa
+    # Interchange a and b as necessary
     if abs(fa) < abs(fb):
         a = b
         fa = fb
@@ -529,6 +589,7 @@ def moddekkerbrent(f, a, b, parameter):
     # main while loop
     while error > delta and k < parameter.maxit:
         b_old = b
+        # Quadriatic Interpolation
         if a != b and a != c and b != c:
             f01 = (fa - fc) / (a - c)
             f12 = (fb - fa) / (b - a)
@@ -540,13 +601,18 @@ def moddekkerbrent(f, a, b, parameter):
                 z = b - 2. * fb / d
             else:
                 z = b - fb / f12
+        # Linear Interpolation
         else:
             z = b - fb * (b - a) / (fb - fa)
-        m = (c - b) / 2.
-        if min(b, b + m) < z < max(b, b + m): b_temp = z
-        else: b_temp = b + m
-        if abs(b - b_temp) > delta: b = b_temp
-        else: b = b + delta * np.sign(m)
+        m = (a + b) / 2.
+        if min(b, m) < z < max(b, m):
+            b_temp = z
+        else:
+            b_temp = m
+        if abs(b - b_temp) > delta:
+            b = b_temp
+        else:
+            b = b + delta * np.sign(m)
         a = b_old
         fa = fb
         fb = f(b)
@@ -561,8 +627,9 @@ def moddekkerbrent(f, a, b, parameter):
             c = a
             fc = fa
         delta = parameter.tol + 2. * eps * abs(b)
-        error = abs(m)
-        if abs(fb) <= parameter.tol: break
+        error = abs(m - b)
+        if abs(fb) <= parameter.tol:
+            break
         k += 1
     if error > delta and k == parameter.maxit:
         term_flag = "Fail"
@@ -575,19 +642,6 @@ def aitken(g, x, parameter):
     """
     Aitken method for accelerating fix point method approximating a solution
         of the scalar equation f(x) = 0.
-
-    Parameters:
-    -----------
-    g : callable
-        scalar-valued function
-    x : float
-        first iterate
-    parameter : class 'rootscalar.param'
-        parameters to be passed in the method
-
-    Returns
-    -------
-    class 'rootscalar.Result'
     """
     stopwatch = timer()
     stopwatch.start()
@@ -597,9 +651,9 @@ def aitken(g, x, parameter):
     # main loop
     while error > parameter.tol and k < parameter.maxit:
         x_old = x
-        x_1 = g(x)
-        x_2 = g(x_1)
-        x = x_2 - (x_2 - x_1)**2 / (x_2 - 2.0*x_1 + x)
+        x1 = g(x)
+        x2 = g(x1)
+        x = x2 - (x2 - x1)**2 / (x2 - 2.*x1 + x)
         error = abs(x - x_old)
         k += 1
     if error > parameter.tol and k == parameter.maxit:
@@ -613,23 +667,6 @@ def modnewton(f, df, x, m, parameter):
     """
     Modified Newton-Raphson method for accelerating Newton-Raphson method
     approximating a solution of the scalar equation f(x) = 0.
-
-    Parameters:
-    -----------
-    f : callable
-        scalar-valued function
-    df : callable
-        exact derivative of f
-    x : float
-        first iterate
-    m : int
-        multiplicity of root
-    parameter : class 'rootscalar.param'
-        parameters to be passed in the method
-
-    Returns
-    -------
-    class 'rootscalar.Result'
     """
     stopwatch = timer()
     stopwatch.start()
@@ -651,29 +688,10 @@ def modnewton(f, df, x, m, parameter):
         stopwatch.get_elapsed_time, "MODIFIED NEWTON", term_flag)
 
 
-def adaptivenewton(f, df, x, parameter, m0, alpha, Lambda_):
+def adaptivenewton(f, df, x, parameter):
     """
     Adaptive Newton method for accelerating fix point method approximating
         a solution of the scalar equation f(x) = 0.
-
-    Parameters:
-    -----------
-    f : callable
-        scalar-valued function
-    df : callable
-        scalar-valued exact derivative of f
-    x : float
-        first iterate
-    parameter : class 'rootscalar.param'
-        parameters to be passed in the method
-    m0 : float
-        parameter m0 >= 1
-    alpha, lambda_ : float
-        parameter 0 < alpha < Lambda_ < 1
-
-    Returns
-    -------
-    class 'rootscalar.Result'
     """
     stopwatch = timer()
     stopwatch.start()
@@ -681,8 +699,8 @@ def adaptivenewton(f, df, x, parameter, m0, alpha, Lambda_):
     error = parameter.tol + 1
     error_abs = error
     fx = f(x)
-    m = m0
-    Lambda = 1
+    m = parameter.m0
+    lmdb = 1
     k = 0
     # main loop
     while error > parameter.tol and k < parameter.maxit:
@@ -692,10 +710,10 @@ def adaptivenewton(f, df, x, parameter, m0, alpha, Lambda_):
         error_abs_old = error_abs
         error_abs = abs(x - x_old)
         error = parameter.abstol * error_abs + parameter.funtol * abs(fx)
-        Lambda_old = Lambda
-        Lambda = error_abs / error_abs_old
-        if abs(Lambda - Lambda_old) < alpha and Lambda > Lambda_:
-            m_temp = 1 / abs(1 - Lambda)
+        lmdb_old = lmdb
+        lmdb = error_abs / error_abs_old
+        if abs(lmdb - lmdb_old) < parameter.alpha and lmdb > parameter.Lambda:
+            m_temp = 1 / abs(1 - lmdb)
             if m < m_temp: m = m_temp
         k += 1
     if error > parameter.tol and k == parameter.maxit:

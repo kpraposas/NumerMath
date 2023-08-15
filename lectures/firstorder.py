@@ -13,12 +13,12 @@ parameter = param()
 parameter.maxit = 100
 parameter.tol = 1e-15
 
-Chord = rootscalar(f, None, 0.0, 0.5, 1.0, options=dict({"method" : "chord"}), parameter=parameter)
-Secant = rootscalar(f, None, None, None, [0.5, 0.0], options=dict({"method" : "secant"}), parameter=parameter)
-RegulaFalsi = rootscalar(f, None, None, None, [0.5, 0.0], options=dict({"method" : "regfalsi"}), parameter=parameter)
-NewtonRaphson = rootscalar(f, g, None, None, 0.5, options=dict({"method" : "newton"}), parameter=parameter)
-Inexactcenter = rootscalar(f, None, None, None, 0.5, options=dict({"method" : "newton", "inexact" : "center"}), parameter=parameter)
-Steffensen = rootscalar(f, None, None, None, 0.5, options=dict({"method" : "steffensen"}), parameter=parameter)
+Chord = rootscalar(f, None, 0.0, 0.5, 1.0, None, options=dict({"method" : "chord"}), parameter=parameter)
+Secant = rootscalar(f, None, None, None, [0.5, 0.0], None, options=dict({"method" : "secant"}), parameter=parameter)
+RegulaFalsi = rootscalar(f, None, None, None, [0.5, 0.0], None, options=dict({"method" : "regfalsi"}), parameter=parameter)
+NewtonRaphson = rootscalar(f, g, None, None, 0.5, None, options=dict({"method" : "newton"}), parameter=parameter)
+Inexactcenter = rootscalar(f, None, None, None, 0.5, None, options=dict({"method" : "newton", "inexact" : "center"}), parameter=parameter)
+Steffensen = rootscalar(f, None, None, None, 0.5, None, options=dict({"method" : "steffensen"}), parameter=parameter)
 
 def takeNumit(result):
     return result.numit
