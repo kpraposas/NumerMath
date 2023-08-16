@@ -80,14 +80,8 @@ class param():
     ----------
     tol : float
         tolerance of the method, default is machine epsilon
-    reftol : float
-        tolerance for the refinement subroutine, default is 1e-3
     maxit : int
         maximum number of iterations, default is 1000
-    refmax : int
-        maximum number of iterations for refinement, default = 100
-    ref : bool
-        refinement subroutine, default is true
     abstol : float
         weight of the absolute error of the root approximate
     funtol : float
@@ -103,20 +97,17 @@ class param():
     
 
     def __init__(self, maxit=1000, tol=np.finfo("float").eps, abstol=0.9, funtol=0.1,
-                 m0=1, alpha=1e-3, Lambda=1e-3, refmax=100, reftol=1e-3, ref=True):
+                 m0=1, alpha=1e-3, Lambda=1e-3):
         """
         Class initialization.
         """
         self.abstol = abstol
         self.funtol = funtol
         self.tol = tol
-        self.reftol = reftol
         self.maxit = maxit
         self.m0 = m0
         self.alpha = alpha
         self.Lambda = Lambda
-        self.refmax = refmax
-        self.ref = ref
 
 
 # Options Dictionary Initialization
@@ -186,65 +177,7 @@ def rootscalar(f, df, a, b, x, m, options, parameter):
         return modnewton(f, df, x, m, parameter)
     if options["method"] == "adaptivenewton":
         return adaptivenewton(f, df, x, parameter)
-
-class Result_Multiple:
-    """
-    Class for mutiple solutions to scalar root-finding algorithms.
-
-    Attributes
-    ----------
-    numit : list
-        number of iterations for each root
-    maxit : int
-        maximum number of iterations
-    x : list
-        approximate roots
-    funval : float
-        function value at each roots
-    tol : float
-        tolerance of the method
-    elapsed_time : float
-        number in seconds for the method to execute
-    method_name : str
-        name of the root-finding method
-    termination_flag : str
-        either 'Fail' or 'Success'
-    """
-
-    def __init__(self, numit, maxit, x, funval, tol, elapsed_time,
-        method_name, termination_flag):
-        """
-        Class initialization
-        """
-        self.numit = numit
-        self.maxit = maxit
-        self.x = x
-        self.funval = funval
-        self.tol = tol
-        self.elapsed_time = elapsed_time
-        self.method_name = method_name
-        self.termination_flag = termination_flag
-
-    def __str__(self):
-        """
-        Class string representation.
-        """
-        list_str_repr = [
-            "ROOT FINDER:                    {}\n".format(self.method_name),
-            "TERMINATION:                    {}\n".format(self.termination_flag),
-            "TOLERANCE:                      {:.16e}\n".format(self.tol),
-            "MAX ITERATIONS:                 {}\n".format(self.maxit),
-            "ELAPSED TIME:                   {:.16e} seconds\n".format(self.elapsed_time),
-            "-"*85,
-            "\nREAL PART\t\t\tIMAG PART\t\t\t|FUNVAL|\tNUMIT\n",
-            "-"*85,
-        ]
-        for i in range(len(self.x)):
-            list_str_repr.append("{:.16f}{:.16f}{:.16f}{}\n".format(self.x[i].real, self.x[i].imag,
-                    self.funval[i], self.numit[i]))
-            list_str_repr.append("-"*85)
-        return "".join(list_str_repr)
-
+    
 
 def bisection(f, a, b, parameter):
     """
@@ -769,172 +702,9 @@ def horner(pn, z):
         remainder of pn evaluated at z
     """
     n = len(pn) - 1
-    q = [0] * (n + 1)
-    q[n] = pn[n]
-    for k in range(n - 1, -1, -1):
-        q[k] = pn[k] + q[k + 1] * z
-    q0 = q[0]
-    q.pop(0)
+    q = [0] * (n)
+    q[n - 1] = pn[n]
+    for k in range(n - 2, -1, -1):
+        q[k] = pn[k + 1] + q[k + 1] * z
+    q0 = pn[0] + q[0] * z
     return q0, q
-
-
-def newtonhorner(pn, z, parameter):
-    """
-    Newton-Horner method for accelerating fix point method approximating a solution
-        of a polynomial pn with coefficients [a0, a1, ..., an]
-
-    Parameters:
-    -----------
-    pn : list
-        coefficients of pn
-    z : float
-        valuation of pn
-    parameter : class 'rootscalar.param'
-         parameters to be passed in the method
-
-    Returns
-    -------
-    z_array : list
-        approximate roots of pn
-    """
-    stopwatch = timer()
-    stopwatch.start()
-    term_flag = "Success"
-    n = len(pn) - 1
-    z_array = []
-    p_array = []
-    k_array = []
-    eps = np.finfo(float).eps
-    p_nm = pn
-    q_nm1 = []
-    error_ref = parameter.tol * parameter.reftol
-    # main loop
-    for m in range(n):
-        k = 0
-        z = z + z * 1j
-        error = parameter.tol + 1
-        if m == n - 1:
-            k += 1
-            z = - p_nm[0] / p_nm[1]
-        else:
-            while error > parameter.tol and k < parameter.maxit:
-                k += 1
-                z_old = z
-                p_z, q_nm1 = horner(p_nm, z)
-                q_z = horner(q_nm1, z)[0]
-                if abs(q_z) > eps:
-                    z = z_old - p_z / q_z
-                    error = max(abs(z - z_old), abs(p_z))
-                else:
-                    error = 0
-                    z = z_old
-                    break
-        # refinement step
-        if parameter.ref == 1:
-            k_ref = 0
-            z_ref = z
-            error = parameter.tol + 1
-            while error > error_ref and k_ref < parameter.refmax:
-                k_ref += 1
-                p_z, q_n1 = horner(pn, z_ref)
-                q_z = horner(q_n1, z_ref)[0]
-                if abs(q_z) > eps:
-                    z_ref2 = z_ref - p_z / q_z
-                    error = max(abs(z_ref - z_ref2), abs(p_z))
-                    z_ref = z_ref2
-                else:
-                    error = 0
-                    break
-            z = z_ref
-        z_array.append(z)
-        p_z = horner(p_nm, z)[0]
-        p_array.append(p_z)
-        p_nm = horner(p_nm, z)[1]
-        k_array.append(k)
-    stopwatch.stop()
-    return Result_Multiple(k_array, parameter.maxit, z_array, p_array, parameter.tol,
-        stopwatch.get_elapsed_time, "NEWTONHORNER", term_flag)
-
-
-def mullerhorner(pn, x0, x1, x2, parameter):
-    """
-    Muller-Horner method for accelerating fix point method approximating a solution
-        of a polynomial pn with coefficients [a0, a1, ..., an]
-
-    Parameters:
-    -----------
-    pn : list
-        coefficients of pn
-    x0, x1, x2 : float
-        initial iterates
-    parameter : class 'rootscalar.param'
-         parameters to be passed in the method
-
-    Returns
-    -------
-    z_array : list
-        approximate roots of pn
-    """
-    stopwatch = timer()
-    stopwatch.start()
-    term_flag = "Success"
-    n = len(pn) - 1
-    z_array = []
-    p_array = []
-    k_array = []
-    eps = np.finfo(float).eps
-    p_nm = pn
-    error_ref = parameter.tol * parameter.reftol
-    # main loop
-    for m in range(0, n):
-        k = 0
-        error = parameter.tol + 1
-        z0 = x0 + 0j
-        z1 = x1 + 0j
-        z2 = x2 + 0j
-        if m == n - 1:
-            k += 1
-            z = - p_nm[0] / p_nm[1]
-        else:
-            while error > parameter.tol and k < parameter.maxit:
-                k += 1
-                f0, f1, f2 = horner(p_nm, z0)[0], horner(p_nm, z1)[0], horner(p_nm, z2)[0]
-                f01 = (f1 - f0) / (z1 - z0)
-                f12 = (f2 - f1) / (z2 - z1)
-                f012 = (f12 - f01) / (z2 - z0)
-                w = f12 + (z2 - z1) * f012
-                alpha = w * w - 4. * f2 * f012
-                d = max(w - np.sqrt(alpha), w + np.sqrt(alpha))
-                if abs(d) > eps:
-                    z = z2 - 2. * f2 / d
-                    error = max(abs(z - z2), abs(f2))
-                else:
-                    z = z2 - f2 / f12
-                    error = 0
-                    break
-                z0, z1, z2 = z1, z2, z
-        # refinement step
-        if parameter.ref == 1:
-            k_ref = 0
-            z_ref = z
-            error = parameter.tol + 1
-            while error > error_ref and k_ref < parameter.refmax:
-                k_ref +=  1
-                p_z, q_n1 = horner(pn, z_ref)
-                q_z = horner(q_n1, z_ref)[0]
-                if abs(q_z) > eps:
-                    z_ref2 = z_ref - p_z / q_z
-                    error = max(abs(z_ref - z_ref2), abs(p_z))
-                    z_ref = z_ref2
-                else:
-                    error = 0
-                    break
-            z = z_ref
-        z_array.append(z)
-        p_z = horner(p_nm, z)[0]
-        p_array.append(p_z)
-        p_nm = horner(p_nm, z)[1]
-        k_array.append(k)
-    stopwatch.stop()
-    return Result_Multiple(k_array, parameter.maxit, z_array, p_array, parameter.tol,
-        stopwatch.get_elapsed_time, "MULLERHORNER", term_flag)
