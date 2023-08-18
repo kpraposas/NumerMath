@@ -1,8 +1,8 @@
-# Sample implementation of Lagrange Interpolation
+# Sample implementation of Newton Lagrange Interpolation
 
 import numpy as np
 from matplotlib import pyplot as plt
-from polyinterp import lagrange
+from polyinterp import newtonlagrange
 
 def fun(x):
     return np.e**(3*x)*np.sin(2*np.pi*x)
@@ -10,8 +10,8 @@ def fun(x):
 x = np.linspace(0., 1., 100)
 y = fun(x)
 
-cubic = lagrange(fun, [1./3.*_ for _ in range(4)], x)
-quartic = lagrange(fun, [1./4.*_ for _ in range(5)], x)
+cubic = newtonlagrange(fun, [1./3.*_ for _ in range(4)], x)
+quartic = newtonlagrange(fun, [1./4.*_ for _ in range(5)], x)
 
 fig = plt.figure()
 ax1 = fig.add_subplot(121)
