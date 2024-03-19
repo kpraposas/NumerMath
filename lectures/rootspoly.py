@@ -78,7 +78,7 @@ class Result:
             "MAX REFINEMENTS:                ", refmax, 
             "ELAPSED TIME:                   {:.16e} seconds\n".format(self.elapsed_time),
             "-"*93,
-            "\nREAL PART\t\tIMAG PART\t\t|FUNVAL|\t\t\t\tNUMIT\t\REFNUM",
+            "\nREAL PART\t\tIMAG PART\t\t|FUNVAL|\t\t\t\tNUMIT\tREFNUM",
             "-"*93,
             "\n"
         ]
@@ -114,8 +114,6 @@ class param():
     funtol : float
         weight of the absolute function value of the root approximate
     """
-    
-
     def __init__(self, maxit=1000, tol=np.finfo("float").eps, abstol=0.9, funtol=0.1,
                  refmax=100, reftol=1e-3, ref=True):
         """
@@ -186,91 +184,40 @@ def horner(p, z):
     return q0, q
 
 
-def quadform(p):
-    """
-    Computes the solutions of quadratic polynomial p using quadratic formula
-    """
-    stopwatch = timer()
-    stopwatch.start()
-    a, b, c = p[2], p[1], p[0]
-    # Compute square root of discriminant
-    sqrtDisc = np.sqrt(b*b - 4.*a*c)
-    x = []
-    x.append((-b + sqrtDisc) / (2.*a))
-    x.append((-b - sqrtDisc) / (2.*a))
-    stopwatch.stop()
-    return Result(None, None, None, None, x, [horner(p, z)[0] for z in x], None, stopwatch.get_elapsed_time,
-                  "Quadratic Formula", None)
+# Options Dictionary Initialization
+options = dict()
+"""
+    method : str
+        method of Polynomial Deflation. Methods are Newton-Horner and Muller-Horner
+"""
+options = {
+    "method" : "newtonhorner"
+}
 
+def rootspoly(p, z, options, parameter):
+    """_summary_
 
-def cardano(p):
+    Args:
+        p (_type_): _description_
+        z (_type_): _description_
+        options (_type_): _description_
+        parameter (_type_): _description_
+
+    Returns:
+        _type_: _description_
     """
-    Computes the solutions of cubic polynomial p using Cardano formula
-    """
-    stopwatch = timer()
-    stopwatch.start()
-    a, b, c, d = p[3], p[2], p[1], p[0]
-    j = complex(0, 1.)
-    q = (3.*a*c - b*b) / (9.*a*a)
-    r = (9.*a*b*c - 27.*a*a*d - 2.*b**3) / (54.*a**3)
-    sqrtD = np.sqrt(q**3 + r*r)
-    u = r + sqrtD
-    v = r - sqrtD
-    if u.real >= 0.:
-        s = np.power(u, 1./3.)
+    n = len(p) - 1
+    if n == 2:
+        return quadform(p)
+    if n == 3:
+        return cardano(p)
+    if n == 4:
+        return quartic(p)
     else:
-        s = -np.power(-u, 1./3.)
-    if v.real >= 0.:
-        t = np.power(v, 1./3.)
-    else:
-        t = -np.power(-v, 1./3.)
-    x = []
-    x.append(s + t - b/(3.*a))
-    x.append(-0.5*(s + t) - b/(3.*a) + np.sqrt(3.)*j*(s - t)/2.)
-    x.append(-0.5*(s + t) - b/(3.*a) - np.sqrt(3.)*j*(s - t)/2.)
-    stopwatch.stop()
-    return Result(None, None, None, None, x, [horner(p, z)[0] for z in x], None, stopwatch.get_elapsed_time,
-                  "Cardano Formula", None)
-
-
-def quartic(p):
-    """
-    Computes the solutions of quartic polynomial p using the formula
-        by Lodovico Ferrari
-    """
-    stopwatch = timer()
-    stopwatch.start()
-    a, b, c, d, e = p[4], p[3], p[2], p[1], p[0]
-    A, B, C, D = b/a, c/a, d/a, e/a
-    k = -A/4.
-    P = 3.*(2.*k + A)*k + B
-    Q = ((2.*A)*k + 2.*B)*k + C
-    R = (((k + A)*k + B)*k + C)*k + D
-    x = []
-    if Q == 0:
-        sqrtDisc = np.sqrt(P*P - 4.*R)
-        rootPos = np.sqrt((-P + sqrtDisc) / 2.0)
-        rootNeg = np.sqrt((-P - sqrtDisc) / 2.0)
-        temp = b / (4.*a)
-        x.append(rootPos - temp)
-        x.append(-rootPos - temp)
-        x.append(rootNeg - temp)
-        x.append(-rootNeg - temp)
-    else:
-        beta = cardano([-Q*Q, P*P - 4.*R, 2.*P, 1])
-        beta = beta.x[0]
-        root = np.sqrt(beta - 2.*(P + beta + Q / np.sqrt(beta)))
-        term1 = (-np.sqrt(beta) + root) / 2.
-        term2 = (-np.sqrt(beta) - root) / 2.
-        temp = b / (4.*a)
-        x.append(term1 - temp)
-        x.append(-term2 - temp)
-        x.append(term2 - temp)
-        x.append(-term1 - temp)
-    stopwatch.stop()
-    return Result(None, None, None, None, x, [horner(p, z)[0] for z in x], None, stopwatch.get_elapsed_time,
-                  "Quartic Formula", None)
-
+        if options["method"] == "newtonhorner":
+            return newtonhorner(p, z, parameter)
+        if options["method"] == "mullerhorner":
+            return mullerhorner(p, z, parameter)
 
 def newtonhorner(p, z, parameter):
     """
@@ -291,27 +238,27 @@ def newtonhorner(p, z, parameter):
     # main loop
     for m in range(n):
         k = 0
-        z = complex(z, z)
+        x = complex(z, z)
         error = parameter.tol + 1
         if m == n - 1:
             k += 1
-            z = - p_aux[0] / p_aux[1]
+            x = - p_aux[0] / p_aux[1]
         else:
             while error > parameter.tol and k < parameter.maxit:
                 k += 1
-                z_old = z
-                p_z, q_aux = horner(p_aux, z)
-                q_z = horner(q_aux, z)[0]
+                z_old = x
+                p_z, q_aux = horner(p_aux, x)
+                q_z = horner(q_aux, x)[0]
                 if abs(q_z) > eps:
-                    z = z_old - p_z / q_z
-                    error = max(abs(z - z_old), abs(p_z))
+                    x = z_old - p_z / q_z
+                    error = max(abs(x - z_old), abs(p_z))
                 else:
                     error = 0
-                    z = z_old
+                    x = z_old
         # refinement step
         if parameter.ref == True:
             k_ref = 0
-            z_ref = z
+            z_ref = x
             error = parameter.tol + 1
             while error > error_ref and k_ref < parameter.refmax:
                 k_ref += 1
@@ -323,10 +270,10 @@ def newtonhorner(p, z, parameter):
                     z_ref = z_ref2
                 else:
                     error = 0
-            z = z_ref
+            x = z_ref
             k_ref_array.append(k_ref)
-        z_array.append(z)
-        p_z, p_aux = horner(p_aux, z)
+        z_array.append(x)
+        p_z, p_aux = horner(p_aux, x)
         p_array.append(p_z)
         k_array.append(k)
     stopwatch.stop()
@@ -335,7 +282,7 @@ def newtonhorner(p, z, parameter):
 
 
 def mullerhorner(p, x, parameter):
-    """f
+    """
     Muller-Horner method for accelerating ix point method approximating a solution
         of a polynomial p with coefficients [a0, a1, ..., an]
     """

@@ -1,13 +1,9 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Mar 10 22:53:28 2022
-
-@author: kennyrogers
-"""
-
 from matplotlib import pyplot as plt
 from matplotlib import ticker
+from matplotlib import rcParams
 import numpy as np
+rcParams['mathtext.fontset'] = 'cm'
+rcParams['font.family'] = 'STIXGeneral'
 
 # Kahan rational function
 def r(x):
@@ -31,7 +27,7 @@ ax = plt.figure(1, figsize=(10, 4)).add_subplot(111)
 ax.plot(k, z, linestyle="--", linewidth=1, color="firebrick")
 ax.semilogy(k, y, marker="o", linestyle="-", linewidth=0.5, color="darkblue",
             markersize=4, markeredgecolor="k", alpha=0.5)
-ax.set_xlabel(r"$k$", fontsize=12)
+ax.set_xlabel("$k$", fontsize=12)
 ax.set_ylabel(r"$fl(r(x_k))$", fontsize=12)
 ax.set_yticks([y_min, (y_min + z[0]) / 2, z[0], (y_max + z[0]) / 2, y_max])
 ax.get_yaxis().set_major_formatter(ticker.ScalarFormatter())

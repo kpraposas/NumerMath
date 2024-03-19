@@ -19,7 +19,6 @@ class timer():
         get_elapsed_time : float
             elapsed time between tic() and toc() calls in seconds
         """
-        pass
 
     def start(self):
         """

@@ -1,7 +1,7 @@
 """ Implementation of first-order methods. """
 
 import numpy as np
-from rootscalar import rootscalar, param
+from rootscalar import chord, secant, regfalsi, newtonraphson, steffensen, param
 
 def f(x):
     return 0.25*np.cos(2*x)**2 - x**2
@@ -13,12 +13,13 @@ parameter = param()
 parameter.maxit = 100
 parameter.tol = 1e-15
 
-Chord = rootscalar(f, None, 0.0, 0.5, 1.0, None, options=dict({"method" : "chord"}), parameter=parameter)
-Secant = rootscalar(f, None, None, None, [0.5, 0.0], None, options=dict({"method" : "secant"}), parameter=parameter)
-RegulaFalsi = rootscalar(f, None, None, None, [0.5, 0.0], None, options=dict({"method" : "regfalsi"}), parameter=parameter)
-NewtonRaphson = rootscalar(f, g, None, None, 0.5, None, options=dict({"method" : "newton"}), parameter=parameter)
-Inexactcenter = rootscalar(f, None, None, None, 0.5, None, options=dict({"method" : "newton", "inexact" : "center"}), parameter=parameter)
-Steffensen = rootscalar(f, None, None, None, 0.5, None, options=dict({"method" : "steffensen"}), parameter=parameter)
+Chord = chord(f, 0., 0.5, 1., parameter)
+Secant = secant(f, 0., 0.5, parameter)
+RegulaFalsi = regfalsi(f, 0., 0.5, parameter)
+NewtonRaphson = newtonraphson(f, g, 0.5, None, parameter)
+Inexactcenter = newtonraphson(f, None, 0.5, "center",
+                              parameter)
+Steffensen = steffensen(f, 0.5, parameter)
 
 def takeNumit(result):
     return result.numit
@@ -26,13 +27,13 @@ def takeNumit(result):
 method = [Chord, Secant, RegulaFalsi, NewtonRaphson, Inexactcenter, Steffensen]
 method.sort(reverse=True, key=takeNumit)
 
-print('-'*86)    
-print("{:<16}{:<22}{:<22}{:<20}{:<6}".format('METHOD', 'APPROXIMATE ROOT',
+print('-'*94)    
+print("{}\t\t{}\t{}\t\t{}\t\t\t{}".format('METHOD', 'APPROXIMATE ROOT',
     'FUNCTION VALUE', 'ERROR', 'NITERS'))
-print('-'*86)
+print('-'*94)
 for i in range(0, 6):
     data = [method[i].method_name, method[i].x, method[i].funval,
         method[i].error, method[i].numit]
-    print("{:<16}{:.17}   {:+.12e}   {:.12e}   {}".format(data[0], data[1],
+    print("{:<16}{:.17}\t{:+.12e}\t{:.12e}\t{}".format(data[0], data[1],
         data[2], data[3], data[4]))
-print('-'*86)
+print('-'*94)

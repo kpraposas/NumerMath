@@ -1,5 +1,35 @@
 "Module for polynomial interpolations"
 
+import numpy as np
+
+def undeterminedcoeff(f, x):
+    """
+    Finds the coefficients of the interpolating polynomial on f
+    given the interpolation nodes x by the Method of
+    Undetermined Coefficientes.
+
+    Attributes
+    ----------
+        f : callable
+            objective real valued function
+        x : list
+            nodes to interpolate function at
+
+    Returns:
+        a : list
+            coefficients of interpolating polynomial
+    """
+    n = len(x)
+    fx = [f(_) for _ in x]
+    V = [[1.] * n for _ in range(n)]
+    for i in range(1,n):
+        for j in range(n):
+            V[j][i] = np.power(x[j],i)
+    a = np.linalg.solve(V, fx)
+    print(a)
+    return a
+
+
 def lagrange(f, x, z):
     """
     Lagrange polynomial interpolation of f at nodes x evaluated at points z

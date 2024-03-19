@@ -1,17 +1,14 @@
 """ Sample implementaion of the bisection method. """
 
-import numpy as np
-from rootscalar import rootscalar, param, options
+from numpy import cos
+from rootscalar import bisection, param
 
 def f(x):
-    return 0.25*np.cos(2*x)**2 - x**2
-
-options = {"method" : "bisection"}
+    return 0.25*cos(2*x)**2 - x**2
 
 parameter = param()
 parameter.maxit = 100
 parameter.tol = 1e-15
 
-result = rootscalar(f, None, 0., 1., None, None, options, parameter)
+result = bisection(f, 0., 1., parameter)
 print(result)
-
