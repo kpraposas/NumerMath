@@ -10,7 +10,6 @@ lectures/__pycache__/rootscalar.cpython-39.pyc
 lectures/__pycache__/timer.cpython-37.pyc
 lectures/__pycache__/timer.cpython-39.pyc
 plots/newtonhorner.png
-lectures/linalg.py
 lectures/linearsystemex.py
 lectures/linearsystemex.py
 lectures/linearalgebra.py
@@ -21,3 +20,6 @@ exercises
 plots
 test/__pycache__
 test.py
+lectures/Math136Ex2_Lab1.py
+lectures/Math136Ex2_Lab2.py
+lectures/Math136Ex3_Lab.py

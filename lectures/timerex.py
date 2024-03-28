@@ -1,4 +1,4 @@
-from timer import timer
+from timer import timer # type: ignore
 
 print("Elapsed time for computing the sum of first",
     "ten million positive integers is")
