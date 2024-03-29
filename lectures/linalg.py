@@ -184,11 +184,11 @@ def cross(x: vector, y: vector) -> matrix:
         outer product of x and y
     """
     n = len(x)
-    A = [[0]*n]*n
+    A = matrix([[0]*n for _ in range(n)])
     for i in range(n):
         for j in range(n):
             A[i][j] = x[i]*y[j]
-    return matrix(A)
+    return A
 
 # Constant for machine epsilon
 eps = np.finfo("float").eps
@@ -853,10 +853,9 @@ class iterative:
             ]
         return "".join(list_str_repr)
 
-
 class param():
     """
-    Class for parameters in iterative methods.
+    Class for parameters in iterative and nonlinear methods.
 
     Attributes
     ----------
@@ -1265,3 +1264,132 @@ def cgresidual(A: matrix, b: vector, x: vector, parameter: param)\
     rel_err = (A*x - b).norm("max")
     return iterative(x, k, parameter.maxit, rel_err, parameter.tol,
                      stopwatch.get_elapsed_time, "CGResidual", term_flag)
+
+class nonlinear:
+    """
+    Class for solutions of nonlinear systems
+    
+    Attributes
+    ----------
+    numit : int
+        number of iterations method took
+    maxit : int
+        maximum number of iterations
+    x : vector
+        solution of the system
+    funval_norm : float
+        norm of the function value of the solution
+    error : float
+        relative error of the solution
+    tol : float
+        tolerance of the method
+    elapsed_time : float
+        time the method took
+    method_name : str
+        name of the method
+    termination_flag : str
+        either 'Fail' or 'Success'
+    """
+    def __init__(self, numit, maxit, x, funval_norm, error, tol, elapsed_time,
+                 method_name, termination_flag):
+        self.numit = numit
+        self.maxit = maxit
+        self.x = x
+        self.funval_norm = funval_norm
+        self.error = error
+        self.tol = tol
+        self.elapsed_time = elapsed_time
+        self.method_name = method_name
+        self.termination_flag = termination_flag
+    
+    def __str__(self):
+        list_str_repr = [
+            "METHOD:                  {}".format(self.method_name),
+            "TERMINATION:             {}".format(self.termination_flag),
+            "FUNVAL NORM:             {:.16e}".format(self.funval_norm),
+            "ERROR:                   {:.16e}".format(self.error),
+            "TOLERANCE:               {:.16e}".format(self.tol),
+            "NUM ITERATIONS:          {}".format(self.numit),
+            "MAX ITERATIONS:          {}".format(self.maxit),
+            "ELAPSED TIME:            {:.5e} seconds".format(self.elapsed_time),
+            "APPROXIMATE SOLUTION:    \n\t{}".format(self.x)
+        ]
+        return "\n".join(list_str_repr)
+    
+def newton(f: callable, Df: callable, x: vector, parameter: param) -> nonlinear:
+    """
+    Extension of Newton-Raphson method to solve nonlinear system of equations
+
+    Parameters
+    ----------
+    f : callable
+        system of equations
+    Df : callable
+        Jacobian of the system
+    x : vector
+        initial guess
+    parameter : param
+        Parameters of the method
+
+    Returns
+    -------
+    nonlinear
+        Result of the method
+    """
+    stopwatch = timer()
+    stopwatch.start()
+    term_flag = "Success"
+    err = parameter.tol + 1.
+    k = 0
+    while err > parameter.tol and k < parameter.maxit:
+        delta = solveLU(Df(x), -f(x)).x
+        x = x + delta
+        err = delta.norm("max")
+        k += 1
+    if err > parameter.tol and k == parameter.maxit:
+        term_flag = "Fail"
+    stopwatch.stop()
+    fx_norm = f(x).norm()
+    return nonlinear(k, parameter.maxit, x, fx_norm, err, parameter.tol,
+                     stopwatch.get_elapsed_time, "NEWTON", term_flag)
+    
+def broyden(f: callable, Q: matrix, x: vector, parameter: param) -> nonlinear:
+    """
+    Broyden Method which approximates the Jacobian instead
+
+    Parameters
+    ----------
+    f : callable
+        system of equations
+    Q : matrix
+        initial guess for the Jacobian
+    x : vector
+        initial guess
+    parameter : param
+        parameters of the method
+
+    Returns
+    -------
+    nonlinear
+        Result of the method
+    """
+    stopwatch = timer()
+    stopwatch.start()
+    term_flag = "Success"
+    err = parameter.tol + 1.
+    k = 0
+    while k < parameter.maxit:
+        delta = solveLU(Q, -f(x)).x
+        x = x + delta
+        err = delta.norm("max")
+        if err > parameter.tol:
+            Q = Q + cross(f(x), delta)*(1./dot(delta, delta))
+        else:
+            break
+        k += 1
+    if err > parameter.tol and k == parameter.maxit:
+        term_flag = "Fail"
+    stopwatch.stop()
+    fx_norm = f(x).norm()
+    return nonlinear(k, parameter.maxit, x, fx_norm, err, parameter.tol, 
+                     stopwatch.get_elapsed_time, "BROYDEN", term_flag)
