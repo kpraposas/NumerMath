@@ -5,8 +5,9 @@ import numpy as np
 
 # local import
 from timer import timer # type: ignore
-from linalg import polyinterp
-from rootspoly import param as rootspoly_param, newtonhorner, horner
+from rootspoly import newtonhorner, horner
+from rootspoly import param as rootspoly_param
+from polyinterp import undeterminedcoeff
 
 class Result:
     """
@@ -509,9 +510,9 @@ def rootpolyinterp(f: callable, x: list, parameter: param) -> Result:
     error = parameter.tol + 1
     k = n - 1
     while error > parameter.tol and k < parameter.maxit:
-        p = polyinterp(f, x)
-        z = newtonhorner(p, xc, rootspoly_param)
-        z = [abs(_) for _ in z if abs(_.imag) <= eps]
+        p = undeterminedcoeff(f, x)
+        z = newtonhorner(p, xc, rootspoly_param()).z
+        z = [_.real for _ in z if abs(_.imag) <= eps]
         xc = min(z)
         fx = f(xc)
         error = parameter.abstol*abs(xc - x[n - 1]) + parameter.funtol*abs(fx)
@@ -552,7 +553,7 @@ def sidisecant(f: callable, x: list, parameter: param) -> Result:
     error = parameter.tol + 1
     k = n - 1
     while error > parameter.tol and k < parameter.maxit:
-        p = polyinterp(f, x)
+        p = undeterminedcoeff(f, x)
         px, dp = horner(p, xc)
         dpx = horner(dp, xc)[0]
         xc = xc - px/dpx

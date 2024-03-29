@@ -1,33 +1,37 @@
 "Module for polynomial interpolations"
 
+from linalg import vector, matrix, solveLU
 import numpy as np
 
-def undeterminedcoeff(f, x):
+def undeterminedcoeff(f: callable, x: vector) -> list:
     """
     Finds the coefficients of the interpolating polynomial on f
     given the interpolation nodes x by the Method of
     Undetermined Coefficientes.
 
-    Attributes
+    Parameters
     ----------
-        f : callable
-            objective real valued function
-        x : list
-            nodes to interpolate function at
+    f : callable
+        objective real valued function
+    x : vector
+        nodes to interpolate function at
 
-    Returns:
-        a : list
-            coefficients of interpolating polynomial
+    Returns
+    -------
+    list
+        coefficients of interpolating polynomial
     """
     n = len(x)
-    fx = [f(_) for _ in x]
-    V = [[1.] * n for _ in range(n)]
-    for i in range(1,n):
+    V = matrix([[0]*n for _ in range(n)])
+    for i in range(n):
+        v = 1.
         for j in range(n):
-            V[j][i] = np.power(x[j],i)
-    a = np.linalg.solve(V, fx)
-    print(a)
-    return a
+            V[i][j] = v
+            v = v*x[i]
+    b = vector()
+    for i in range(n):
+        b.append(f(x[i]))
+    return solveLU(V, b).x
 
 
 def lagrange(f, x, z):
